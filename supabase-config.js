@@ -1,182 +1,389 @@
 // 🔐 Supabase Configuration
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/+esm';
+import {
+  createClient
+} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/+esm';
 
-// Your Supabase credentials (public key is safe to share)
-const SUPABASE_URL = 'https://wggyfkrbnmnbfakidilv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZ3lma3Jibm1uYmZha2lkaWx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NTA2NTMsImV4cCI6MjEwNDAyNjY1M30.4BeWBykbNWS1b9-_0Or2cTZDowkGCdWc8JMY0ZRp54Y';
+// Your Supabase project credentials
+const SUPABASE_URL =
+  'https://wggyfkrbnmnbfakidilv.supabase.co';
+
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZ3lma3Jibm1uYmZha2lkaWx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NTA2NTMsImV4cCI6MjEwNDAyNjY1M30.4BeWBykbNWS1b9-_0Or2cTZDowkGCdWc8JMY0ZRp54Y';
+
+// URL Supabase uses after email confirmation
+const EMAIL_REDIRECT_URL =
+  'https://beita836.github.io/gametrade-marketplace/auth.html';
 
 // Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
 
 // 📝 REGISTER NEW USER
 async function registerUser(email, password, username) {
   try {
-    // Create auth user
+    // Create the authentication user
     const { data, error } = await supabase.auth.signUp({
       email: email,
       password: password,
+
       options: {
+        // Required for your GitHub Pages deployment
+        emailRedirectTo: EMAIL_REDIRECT_URL,
+
+        // Store username in Supabase Auth user metadata
         data: {
           username: username
         }
       }
     });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
-    const userId = data.user.id;
+    if (!data.user) {
+      throw new Error('Supabase did not return a user.');
+    }
 
-    // Create user profile in database
-    await createUserProfile(userId, username, email);
+    /*
+     * If email confirmation is disabled, a session is created
+     * immediately and the profile can be created now.
+     *
+     * If email confirmation is enabled, data.session is null.
+     * The profile will be created after the user logs in.
+     */
+    if (data.session) {
+      await createUserProfile(
+        data.user.id,
+        username,
+        email
+      );
+    }
 
     console.log('✅ User registered successfully!');
-    return { success: true, userId };
+
+    return {
+      success: true,
+      userId: data.user.id,
+      requiresEmailConfirmation: !data.session
+    };
   } catch (error) {
-    console.error('❌ Registration error:', error.message);
-    return { success: false, error: error.message };
+    console.error(
+      '❌ Registration error:',
+      error.message
+    );
+
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
+
 
 // 🔓 LOGIN USER
 async function loginUser(email, password) {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password
-    });
+    const { data, error } =
+      await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
+    /*
+     * When email confirmation is enabled, the profile is
+     * created here after the user has successfully logged in.
+     */
+    const username =
+      data.user.user_metadata?.username;
+
+    if (username) {
+      await createUserProfile(
+        data.user.id,
+        username,
+        email
+      );
+    }
 
     console.log('✅ Login successful!');
-    return { success: true, user: data.user };
+
+    return {
+      success: true,
+      user: data.user
+    };
   } catch (error) {
-    console.error('❌ Login error:', error.message);
-    return { success: false, error: error.message };
+    console.error(
+      '❌ Login error:',
+      error.message
+    );
+
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
+
 
 // 🚪 LOGOUT USER
 async function logoutUser() {
   try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    const { error } =
+      await supabase.auth.signOut();
+
+    if (error) {
+      throw error;
+    }
+
     console.log('✅ Logout successful!');
-    return { success: true };
+
+    return {
+      success: true
+    };
   } catch (error) {
-    console.error('❌ Logout error:', error.message);
-    return { success: false, error: error.message };
+    console.error(
+      '❌ Logout error:',
+      error.message
+    );
+
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
+
 
 // 👤 GET CURRENT USER
 async function getCurrentUser() {
   try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
+    const { data, error } =
+      await supabase.auth.getSession();
+
+    if (error) {
+      throw error;
+    }
+
     return data.session?.user || null;
   } catch (error) {
-    console.error('❌ Error getting current user:', error);
+    console.error(
+      '❌ Error getting current user:',
+      error
+    );
+
     return null;
   }
 }
 
-// 📊 CREATE USER PROFILE
-async function createUserProfile(userId, username, email) {
-  try {
-    const { error } = await supabase.from('users').insert([
-      {
-        auth_id: userId,
-        username: username,
-        email: email,
-        created_at: new Date()
-      }
-    ]);
 
-    if (error) throw error;
+// 📊 CREATE USER PROFILE
+async function createUserProfile(
+  userId,
+  username,
+  email
+) {
+  try {
+    /*
+     * Check whether a profile already exists.
+     * This prevents duplicate profiles when the user
+     * logs in more than once.
+     */
+    const {
+      data: existingProfile,
+      error: lookupError
+    } = await supabase
+      .from('users')
+      .select('auth_id')
+      .eq('auth_id', userId)
+      .maybeSingle();
+
+    if (lookupError) {
+      throw lookupError;
+    }
+
+    if (existingProfile) {
+      console.log('✅ User profile already exists!');
+      return {
+        success: true,
+        alreadyExists: true
+      };
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .insert([
+        {
+          auth_id: userId,
+          username: username,
+          email: email,
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+    if (error) {
+      throw error;
+    }
+
     console.log('✅ User profile created!');
+
+    return {
+      success: true,
+      alreadyExists: false
+    };
   } catch (error) {
-    console.error('❌ Error creating profile:', error.message);
+    console.error(
+      '❌ Error creating profile:',
+      error.message
+    );
+
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
+
 
 // 👤 GET USER PROFILE
 async function getUserProfile(userId) {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_id', userId)
-      .single();
+    const { data, error } =
+      await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_id', userId)
+        .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
     return data;
   } catch (error) {
-    console.error('❌ Error getting profile:', error.message);
+    console.error(
+      '❌ Error getting profile:',
+      error.message
+    );
+
     return null;
   }
 }
+
 
 // 📦 ADD ORDER TO USER
 async function addOrderToUser(userId, order) {
   try {
-    // Insert order into orders table
-    const { data: orderData, error: orderError } = await supabase
+    const {
+      data: orderData,
+      error: orderError
+    } = await supabase
       .from('orders')
-      .insert([{
-        user_id: userId,
-        order_id: order.id,
-        order_time: order.time,
-        buyer_name: order.buyer,
-        product_title: order.title,
-        amount: order.amount,
-        status: order.status,
-        created_at: new Date()
-      }])
+      .insert([
+        {
+          user_id: userId,
+          order_id: order.id,
+          order_time: order.time,
+          buyer_name: order.buyer,
+          product_title: order.title,
+          amount: order.amount,
+          status: order.status,
+          created_at: new Date().toISOString()
+        }
+      ])
       .select();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      throw orderError;
+    }
 
-    console.log('✅ Order added to user account!');
-    return { success: true, order: orderData[0] };
+    console.log(
+      '✅ Order added to user account!'
+    );
+
+    return {
+      success: true,
+      order: orderData[0]
+    };
   } catch (error) {
-    console.error('❌ Error adding order:', error.message);
-    return { success: false, error: error.message };
+    console.error(
+      '❌ Error adding order:',
+      error.message
+    );
+
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
+
 
 // 📦 GET USER ORDERS
 async function getUserOrders(userId) {
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const { data, error } =
+      await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', {
+          ascending: false
+        });
 
-    if (error) throw error;
-    return { success: true, orders: data };
+    if (error) {
+      throw error;
+    }
+
+    return {
+      success: true,
+      orders: data
+    };
   } catch (error) {
-    console.error('❌ Error fetching orders:', error.message);
-    return { success: false, orders: [] };
+    console.error(
+      '❌ Error fetching orders:',
+      error.message
+    );
+
+    return {
+      success: false,
+      orders: []
+    };
   }
 }
+
 
 // 🔍 SEARCH USER BY USERNAME
 async function findUserByUsername(username) {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
+    const { data, error } =
+      await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
     return data;
   } catch (error) {
-    console.error('❌ Error searching user:', error.message);
+    console.error(
+      '❌ Error searching user:',
+      error.message
+    );
+
     return null;
   }
 }
+
 
 // Export all functions
 export {
