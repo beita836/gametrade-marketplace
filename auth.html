@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GameTrade - 登录/注册</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .auth-container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 400px;
+      padding: 40px;
+    }
+
+    .auth-container h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: bold;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-top: 10px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .toggle-form {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+
+    .toggle-form a {
+      color: #667eea;
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .error-message {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-top: 10px;
+      display: none;
+      padding: 10px;
+      background: #fadbd8;
+      border-radius: 5px;
+      border-left: 4px solid #e74c3c;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .loading {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <!-- 登录表单 -->
+    <div id="loginForm">
+      <h2>🎮 GameTrade 登录</h2>
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="loginPassword" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">登录</button>
+      <div class="error-message" id="loginError"></div>
+      <div class="toggle-form">
+        没有账户？<a onclick="toggleForm()">立即注册</a>
+      </div>
+    </div>
+
+    <!-- 注册表单 -->
+    <div id="registerForm" class="hidden">
+      <h2>🎮 GameTrade 注册</h2>
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="registerUsername" placeholder="your username">
+      </div>
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="registerEmail" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="registerPassword" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>确认密码</label>
+        <input type="password" id="registerConfirm" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" id="registerBtn" onclick="handleRegister()">注册</button>
+      <div class="error-message" id="registerError"></div>
+      <div class="toggle-form">
+        已有账户？<a onclick="toggleForm()">立即登录</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      registerUser,
+      loginUser,
+      getCurrentUser
+    } from './supabase-config.js';
+
+    window.toggleForm = function() {
+      document.getElementById('loginForm').classList.toggle('hidden');
+      document.getElementById('registerForm').classList.toggle('hidden');
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('registerError').style.display = 'none';
+    };
+
+    window.handleLogin = async function() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('loginError');
+      const btn = document.getElementById('loginBtn');
+
+      if (!email || !password) {
+        errorDiv.textContent = '请填写所有字段';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      const result = await loginUser(email, password);
+
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      if (result.success) {
+        errorDiv.style.display = 'none';
+        window.location.href = 'index .html';
+      } else {
+        errorDiv.textContent = result.error;
+        errorDiv.style.display = 'block';
+      }
+    };
+
+    window.handleRegister = async function() {
+      const username = document.getElementById('registerUsername').value;
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      const confirm = document.getElementById('registerConfirm').value;
+      const errorDiv = document.getElementById('registerError');
+      const btn = document.getElementById('registerBtn');
+
+      if (!username || !email || !password || !confirm) {
+        errorDiv.textContent = '请填写所有字段';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      if (password !== confirm) {
+        errorDiv.textContent = '两次输入的密码不一致';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      if (password.length < 6) {
+        errorDiv.textContent = '密码至少需要6个字符';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      const result = await registerUser(email, password, username);
+
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      if (result.success) {
+        errorDiv.style.display = 'none';
+        alert('✅ 注册成功！请登录');
+        window.toggleForm();
+      } else {
+        errorDiv.textContent = result.error;
+        errorDiv.style.display = 'block';
+      }
+    };
+
+    // Check if user already logged in
+    const user = await getCurrentUser();
+    if (user) {
+      window.location.href = 'index .html';
+    }
+  </script>
+</body>
+</html>
