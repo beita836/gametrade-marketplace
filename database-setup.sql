@@ -1,4 +1,4 @@
--- 🗄️ Supabase Database Setup SQL
+-- 🗄️ Supabase Database Setup SQL (Fixed Version)
 -- Run this SQL in Supabase SQL Editor to create the required tables
 
 -- Create profiles table
@@ -9,8 +9,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   total_orders integer DEFAULT 0,
-  total_amount numeric DEFAULT 0,
-  CONSTRAINT username_length CHECK (char_length(username) >= 3)
+  total_amount numeric DEFAULT 0
 );
 
 -- Create orders table
@@ -24,8 +23,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   amount numeric NOT NULL,
   status text DEFAULT 'pending',
   created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT amount_positive CHECK (amount > 0)
+  updated_at timestamp with time zone DEFAULT now()
 );
 
 -- Enable Row Level Security (RLS)
@@ -62,23 +60,3 @@ CREATE POLICY "Users can update their own orders" ON public.orders
 CREATE INDEX idx_profiles_username ON public.profiles(username);
 CREATE INDEX idx_orders_user_id ON public.orders(user_id);
 CREATE INDEX idx_orders_created_at ON public.orders(created_at);
-
--- Create a function to update the updated_at timestamp
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$;
-
--- Create triggers for updated_at
-CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON public.profiles
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER orders_updated_at BEFORE UPDATE ON public.orders
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_updated_at();
