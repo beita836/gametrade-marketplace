@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单迁移 - GameTrade</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      padding: 40px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .info-box {
+      background: #e8f4f8;
+      border-left: 4px solid #3498db;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      color: #2c3e50;
+    }
+
+    .orders-list {
+      margin: 30px 0;
+    }
+
+    .order-item {
+      background: #f8f9fa;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border-left: 4px solid #667eea;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .order-info {
+      flex: 1;
+    }
+
+    .order-id {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .order-detail {
+      color: #666;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    .order-amount {
+      font-weight: bold;
+      color: #27ae60;
+      font-size: 18px;
+      margin-left: 20px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-top: 20px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+      margin-top: 10px;
+    }
+
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .status.success {
+      background: #d5f4e6;
+      color: #27ae60;
+      border-left: 4px solid #27ae60;
+      display: block;
+    }
+
+    .status.error {
+      background: #fadbd8;
+      color: #e74c3c;
+      border-left: 4px solid #e74c3c;
+      display: block;
+    }
+
+    .loading {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .summary {
+      background: #f0f0f0;
+      padding: 20px;
+      border-radius: 5px;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .summary-item {
+      margin: 10px 0;
+      font-size: 16px;
+    }
+
+    .summary-label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .summary-value {
+      color: #667eea;
+      font-size: 20px;
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .back-link a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📦 订单迁移</h1>
+    <p class="subtitle">将现有订单导入到您的账户</p>
+
+    <div class="info-box">
+      <strong>ℹ️ 说明:</strong> 点击"开始迁移"按钮，系统将自动把所有现有订单转移到您的账户中。
+    </div>
+
+    <div class="summary" id="summary" style="display: none;">
+      <div class="summary-item">
+        <span class="summary-label">待迁移订单数:</span>
+        <span class="summary-value" id="orderCount">0</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">总金额:</span>
+        <span class="summary-value" id="totalAmount">¥0</span>
+      </div>
+    </div>
+
+    <div class="orders-list" id="ordersList"></div>
+
+    <button class="btn btn-primary" id="migrateBtn" onclick="startMigration()">🚀 开始迁移</button>
+    <button class="btn btn-secondary" onclick="window.location.href='index.html'">← 返回首页</button>
+
+    <div class="status" id="status"></div>
+
+    <div class="back-link">
+      <a href="index.html">← 返回首页</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      getCurrentUser,
+      getUserProfile,
+      addOrderToUser
+    } from './supabase-config.js';
+
+    // Define existing orders (same as in your index.html)
+    const EXISTING_ORDERS = [
+      { id: "GT202608170001", time: "2026-08-17 19:59", buyer: "买家名称", amount: 200, title: "订单商品", status: "交易完成" },
+      { id: "GT202608170002", time: "2026-08-17 15:30", buyer: "GameMaster", amount: 350, title: "CS2 饰品", status: "交易完成" },
+      { id: "GT202608170003", time: "2026-08-16 20:15", buyer: "Pro Player", amount: 500, title: "PUBG 陪玩", status: "交易完成" },
+      { id: "GT202608160001", time: "2026-08-16 10:45", buyer: "NewUser", amount: 150, title: "数字商品", status: "交易完成" },
+      { id: "GT202608150001", time: "2026-08-15 18:20", buyer: "VIP Member", amount: 800, title: "高级陪玩包", status: "交易完成" }
+    ];
+
+    let currentUser = null;
+    let userProfile = null;
+
+    // Initialize on page load
+    async function init() {
+      currentUser = await getCurrentUser();
+
+      if (!currentUser) {
+        document.getElementById('status').textContent = '❌ 请先登录您的账户';
+        document.getElementById('status').classList.add('error');
+        document.getElementById('migrateBtn').disabled = true;
+        return;
+      }
+
+      userProfile = await getUserProfile(currentUser.id);
+      displayOrders();
+    }
+
+    function displayOrders() {
+      const ordersList = document.getElementById('ordersList');
+      const summary = document.getElementById('summary');
+      const orderCount = document.getElementById('orderCount');
+      const totalAmount = document.getElementById('totalAmount');
+
+      let total = 0;
+      ordersList.innerHTML = EXISTING_ORDERS.map(order => {
+        total += order.amount;
+        return `
+          <div class="order-item">
+            <div class="order-info">
+              <div class="order-id">${order.id}</div>
+              <div class="order-detail">购买者: ${order.buyer}</div>
+              <div class="order-detail">商品: ${order.title}</div>
+              <div class="order-detail">时间: ${order.time}</div>
+            </div>
+            <div class="order-amount">¥${order.amount}</div>
+          </div>
+        `;
+      }).join('');
+
+      orderCount.textContent = EXISTING_ORDERS.length;
+      totalAmount.textContent = `¥${total}`;
+      summary.style.display = 'block';
+    }
+
+    window.startMigration = async function() {
+      if (!currentUser) {
+        document.getElementById('status').textContent = '❌ 请先登录';
+        document.getElementById('status').classList.add('error');
+        return;
+      }
+
+      const btn = document.getElementById('migrateBtn');
+      const status = document.getElementById('status');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      status.style.display = 'none';
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const order of EXISTING_ORDERS) {
+        const result = await addOrderToUser(currentUser.id, order);
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      if (failCount === 0) {
+        status.textContent = `✅ 迁移成功！已导入 ${successCount} 条订单`;
+        status.classList.remove('error');
+        status.classList.add('success');
+      } else {
+        status.textContent = `⚠️ 迁移完成。成功: ${successCount}, 失败: ${failCount}`;
+        status.classList.remove('success');
+        status.classList.add('error');
+      }
+    };
+
+    // Initialize
+    init();
+  </script>
+</body>
+</html>
