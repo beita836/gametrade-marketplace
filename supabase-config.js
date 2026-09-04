@@ -184,24 +184,15 @@ async function getCurrentUser() {
 
 
 // 📊 CREATE USER PROFILE
-async function createUserProfile(
-  userId,
-  username,
-  email
-) {
+async function createUserProfile(userId, username, email) {
   try {
-    /*
-     * Check whether a profile already exists.
-     * This prevents duplicate profiles when the user
-     * logs in more than once.
-     */
     const {
       data: existingProfile,
       error: lookupError
     } = await supabase
-      .from('users')
-      .select('auth_id')
-      .eq('auth_id', userId)
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
       .maybeSingle();
 
     if (lookupError) {
@@ -210,6 +201,7 @@ async function createUserProfile(
 
     if (existingProfile) {
       console.log('✅ User profile already exists!');
+
       return {
         success: true,
         alreadyExists: true
@@ -217,15 +209,12 @@ async function createUserProfile(
     }
 
     const { error } = await supabase
-      .from('users')
-      .insert([
-        {
-          auth_id: userId,
-          username: username,
-          email: email,
-          created_at: new Date().toISOString()
-        }
-      ]);
+      .from('profiles')
+      .insert({
+        id: userId,
+        username: username,
+        email: email
+      });
 
     if (error) {
       throw error;
@@ -254,12 +243,11 @@ async function createUserProfile(
 // 👤 GET USER PROFILE
 async function getUserProfile(userId) {
   try {
-    const { data, error } =
-      await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', userId)
-        .single();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
     if (error) {
       throw error;
@@ -275,6 +263,31 @@ async function getUserProfile(userId) {
     return null;
   }
 }
+
+
+// 🔍 SEARCH USER BY USERNAME
+async function findUserByUsername(username) {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('username', username)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error(
+      '❌ Error searching user:',
+      error.message
+    );
+
+    return null;
+  }
+
 
 
 // 📦 ADD ORDER TO USER
