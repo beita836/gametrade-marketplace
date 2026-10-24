@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameTrade - 游戏交易市场</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --primary: #4568ff;
+      --primary-dark: #2d4de0;
+      --text: #1b1f2d;
+      --muted: #60708a;
+      --line: #e8edf7;
+      --success: #1fbf75;
+      --warning: #ff9f43;
+      --danger: #ff5a5a;
+      --shadow: 0 12px 30px rgba(43, 60, 116, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    img { max-width: 100%; display: block; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .brand small {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+    .searchbar {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f5f8ff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 14px;
+      margin-left: 16px;
+    }
+    .searchbar input {
+      border: none;
+      outline: none;
+      background: transparent;
+      flex: 1;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+    .searchbar button,
+    .action-btn,
+    .nav-btn,
+    .tab,
+    .primary-btn,
+    .secondary-btn,
+    .mini-btn {
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .searchbar button,
+    .primary-btn,
+    .action-btn {
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 16px;
+      font-weight: 700;
+    }
+    .searchbar button:hover,
+    .primary-btn:hover,
+    .action-btn:hover { background: var(--primary-dark); }
+
+    .container {
+      max-width: 1100px;
+      margin: 20px auto 70px;
+      padding: 0 18px;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 1.08rem;
+      font-weight: 800;
+      margin: 0;
+    }
+    .muted { color: var(--muted); }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .tab {
+      background: #edf2ff;
+      color: var(--primary);
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+    .tab.active {
+      background: var(--primary);
+      color: white;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .product-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+    .product-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      background: #eaeefb;
+    }
+    .product-body {
+      padding: 12px;
+    }
+    .product-name {
+      font-weight: 800;
+      font-size: 0.96rem;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      min-height: 42px;
+    }
+    .product-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .price {
+      color: #e33262;
+      font-weight: 800;
+      font-size: 1.08rem;
+    }
+
+    .seller-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+    }
+    .seller-row:last-child { border-bottom: none; }
+    .shop {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #eef2ff;
+    }
+    .seller-name { font-weight: 800; }
+    .status-pill {
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      color: var(--success);
+      background: rgba(31,191,117,0.12);
+      font-weight: 800;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: #fbfcff;
+      border-radius: 12px;
+      padding: 12px 14px;
+      gap: 14px;
+      cursor: pointer;
+    }
+    .order-item strong { display: block; margin-bottom: 4px; }
+
+    .profile-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .profile-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .profile-user .avatar {
+      width: 70px;
+      height: 70px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .stat {
+      background: #f7f9ff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .stat-value {
+      margin-top: 6px;
+      font-weight: 900;
+      font-size: 1.25rem;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--line);
+      padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
+      z-index: 15;
+    }
+    .nav-btn {
+      flex: 1;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+      padding: 10px 8px;
+    }
+    .nav-btn.active {
+      background: #eef3ff;
+      color: var(--primary);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(16, 22, 43, 0.42);
+      padding: 18px;
+      z-index: 30;
+    }
+    .modal.open { display: flex; }
+    .sheet {
+      width: min(520px, 100%);
+      background: white;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      box-shadow: 0 20px 40px rgba(17, 24, 39, 0.2);
+      padding: 20px;
+      max-height: 88vh;
+      overflow-y: auto;
+    }
+    .sheet h3 {
+      margin: 0 0 16px;
+      font-size: 1.2rem;
+    }
+    .sheet-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .sheet-row:last-child { border-bottom: none; }
+    .field {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #f9fbff;
+      border-radius: 10px;
+      padding: 11px 12px;
+      margin: 8px 0;
+      outline: none;
+    }
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .secondary-btn {
+      background: #edf1ff;
+      color: var(--primary);
+      padding: 10px 16px;
+      font-weight: 700;
+    }
+    .mini-btn {
+      padding: 8px 10px;
+      background: #eef3ff;
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .warning { color: var(--danger); }
+    @media (max-width: 640px) {
+      .topbar-inner { flex-wrap: wrap; }
+      .searchbar { width: 100%; order: 3; margin-left: 0; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .profile-card, .order-item { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">GameTrade <small>游戏交易市场</small></div>
+      <div class="searchbar">
+        <input id="searchInput" type="text" placeholder="搜索商品/游戏/卖家" />
+        <button id="searchBtn">搜索</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="page active" data-page="home">
+      <div class="card">
+        <div class="section-header">
+          <h3 class="section-title">热门分类</h3>
+        </div>
+        <div id="categoryTabs" class="tags"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <h3 class="section-title">热门商品</h3>
+          <button class="mini-btn" data-go="market">查看全部</button>
+        </div>
+        <div id="featuredProducts" class="grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <h3 class="section-title">热门卖家</h3>
+        </div>
+        <div id="sellerList" class="list"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="market">
+      <div class="card">
+        <div class="section-header">
+          <h3 class="section-title">全部商品</h3>
+        </div>
+        <div id="marketTabs" class="tags"></div>
+        <div id="marketProducts" class="grid" style="margin-top:16px;"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="orders">
+      <div class="card">
+        <div class="section-header">
+          <h3 class="section-title">订单查询</h3>
+        </div>
+        <div class="searchbar" style="margin:0 0 14px;">
+          <input id="orderSearchInput" type="text" placeholder="输入订单号或买家姓名" />
+          <button id="orderSearchBtn">查询</button>
+        </div>
+        <div id="orderResults" class="list"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="mine">
+      <div class="card profile-card">
+        <div class="profile-user">
+          <img class="avatar" src="https://i.pravatar.cc/100?img=15" alt="avatar" />
+          <div>
+            <div style="font-size:1.2rem;font-weight:900;">贝塔</div>
+            <div class="muted">Lv.6 优质卖家 · 99.7% 好评率</div>
+          </div>
+        </div>
+        <button class="action-btn" id="publishBtn">发布商品</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">订单数</div>
+          <div class="stat-value" id="statOrders">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">累计成交</div>
+          <div class="stat-value" id="statRevenue">¥0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">可用余额</div>
+          <div class="stat-value">¥3680</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="section-header">
+          <h3 class="section-title">我的订单</h3>
+        </div>
+        <div id="mineOrders" class="list"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="底部导航">
+    <button class="nav-btn active" data-page="home">⌂<br>首页</button>
+    <button class="nav-btn" data-page="market">◈<br>市场</button>
+    <button class="nav-btn" data-page="orders">▣<br>订单</button>
+    <button class="nav-btn" data-page="mine">◉<br>我的</button>
+  </nav>
+
+  <div id="productModal" class="modal" aria-modal="true">
+    <div class="sheet">
+      <h3 id="modalTitle">商品详情</h3>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      getCurrentUser,
+      addOrderToUser,
+      getUserOrders,
+      logoutUser
+    } from './supabase-config.js';
+
+    const categories = ['全部', 'CS2', '三角洲', 'PUBG', '数字商品'];
+
+    const PRODUCTS = [
+      { id: 1, title: '火蛇饰品短租 · 1天', shop: 'GamePro', price: 200, sales: 128, game: 'CS2', img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=900&q=80' },
+      { id: 2, title: '三角洲高端皮肤包', shop: '猎人铺子', price: 390, sales: 81, game: '三角洲', img: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=900&q=80' },
+      { id: 3, title: 'PUBG 代练陪玩 · 2小时', shop: '小北陪玩', price: 260, sales: 145, game: 'PUBG', img: 'https://images.unsplash.com/photo-1542751110-97427bbecf20?auto=format&fit=crop&w=900&q=80' },
+      { id: 4, title: '虚拟皮肤卡密', shop: 'MiloStore', price: 99, sales: 309, game: '数字商品', img: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=900&q=80' },
+      { id: 5, title: '反恐精英 传奇武器外观', shop: '天选卖家', price: 530, sales: 43, game: 'CS2', img: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=900&q=80' },
+      { id: 6, title: '三角洲载具代取服务', shop: '锐意部队', price: 180, sales: 102, game: '三角洲', img: 'https://images.unsplash.com/photo-1560253023-3ec5d5029599?auto=format&fit=crop&w=900&q=80' },
+      { id: 7, title: 'PUBG 训练营通行证', shop: '竞技场', price: 150, sales: 68, game: 'PUBG', img: 'https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=900&q=80' },
+      { id: 8, title: '电竞账号代购', shop: '老陈闪购', price: 420, sales: 57, game: '数字商品', img: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?auto=format&fit=crop&w=900&q=80' }
+    ];
+
+    const SELLERS = [
+      { name: 'GamePro', level: 'Lv.6 优质卖家', rate: '99.7%', sales: 3280, main: 'CS2 饰品/陪玩', avatar: 'https://i.pravatar.cc/100?img=12' },
+      { name: '猎人铺子', level: 'Lv.5 专业卖家', rate: '98.9%', sales: 2610, main: '三角洲装备', avatar: 'https://i.pravatar.cc/100?img=32' },
+      { name: '小北陪玩', level: 'Lv.4 热门卖家', rate: '97.8%', sales: 1980, main: 'PUBG/陪玩', avatar: 'https://i.pravatar.cc/100?img=17' },
+      { name: 'MiloStore', level: 'Lv.7 信誉优先', rate: '99.8%', sales: 4130, main: '数字商品', avatar: 'https://i.pravatar.cc/100?img=24' }
+    ];
+
+    const ORDERS = [
+      { id: 'GT202608170001', time: '2026-08-17 19:59', buyer: '李杨', amount: 200, title: '火蛇饰品短租 · 1天', status: '交易完成' },
+      { id: 'GT202608190002', time: '2026-08-19 15:30', buyer: 'GameMaster', amount: 350, title: 'CS2 饰品', status: '交易完成' },
+      { id: 'GT202608220003', time: '2026-08-22 20:15', buyer: 'Pro Player', amount: 500, title: 'PUBG 陪玩', status: '交易完成' }
+    ];
+
+    const state = {
+      page: 'home',
+      activeCategory: '全部',
+      search: '',
+      currentProduct: null,
+      currentOrder: null,
+      currentSeller: null,
+      pendingSearch: ''
+    };
+
+    function getFilteredProducts() {
+      const keyword = state.search.trim().toLowerCase();
+      return PRODUCTS.filter((product) => {
+        const categoryMatch = state.activeCategory === '全部' || product.game === state.activeCategory;
+        const keywordMatch = !keyword || [product.title, product.shop, product.game].some((v) => String(v).toLowerCase().includes(keyword));
+        return categoryMatch && keywordMatch;
+      });
+    }
+
+    function renderCategoryTabs(targetId) {
+      const root = document.getElementById(targetId);
+      root.innerHTML = categories.map((category) => `
+        <button class="tab ${state.activeCategory === category ? 'active' : ''}" data-category="${category}">${category}</button>
+      `).join('');
+      root.querySelectorAll('[data-category]').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.activeCategory = button.dataset.category;
+          renderCategoryTabs('categoryTabs');
+          renderCategoryTabs('marketTabs');
+          renderMarket();
+          renderHome();
+        });
+      });
+    }
+
+    function renderHome() {
+      const featured = getFilteredProducts().slice(0, 4);
+      const featuredRoot = document.getElementById('featuredProducts');
+      featuredRoot.innerHTML = featured.map((product) => `
+        <article class="product-card" data-product-id="${product.id}">
+          <img src="${product.img}" alt="${product.title}" />
+          <div class="product-body">
+            <div class="product-name">${product.title}</div>
+            <div class="product-meta">
+              <span>${product.shop}</span>
+              <span>${product.sales}人付款</span>
+            </div>
+            <div class="product-meta" style="margin-top:10px;">
+              <span class="price">¥${product.price}</span>
+              <span>${product.game}</span>
+            </div>
+          </div>
+        </article>
+      `).join('');
+
+      featuredRoot.querySelectorAll('[data-product-id]').forEach((card) => {
+        card.addEventListener('click', () => openProductById(Number(card.dataset.productId)));
+      });
+
+      const sellerRoot = document.getElementById('sellerList');
+      sellerRoot.innerHTML = SELLERS.map((seller) => `
+        <div class="seller-row" data-seller-name="${seller.name}">
+          <div class="shop">
+            <img src="${seller.avatar}" class="avatar" />
+            <div>
+              <div class="seller-name">${seller.name}</div>
+              <div class="muted">${seller.level}</div>
+            </div>
+          </div>
+          <div class="status-pill">${seller.rate}</div>
+        </div>
+      `).join('');
+
+      sellerRoot.querySelectorAll('[data-seller-name]').forEach((row) => {
+        row.addEventListener('click', () => {
+          const seller = SELLERS.find((item) => item.name === row.dataset.sellerName);
+          if (seller) openSellerModal(seller);
+        });
+      });
+    }
+
+    function renderMarket() {
+      const products = getFilteredProducts();
+      const root = document.getElementById('marketProducts');
+      root.innerHTML = products.map((product) => `
+        <article class="product-card" data-product-id="${product.id}">
+          <img src="${product.img}" alt="${product.title}" />
+          <div class="product-body">
+            <div class="product-name">${product.title}</div>
+            <div class="product-meta">
+              <span>${product.shop}</span>
+              <span>${product.sales}人付款</span>
+            </div>
+            <div class="product-meta" style="margin-top:10px;">
+              <span class="price">¥${product.price}</span>
+              <span>${product.game}</span>
+            </div>
+          </div>
+        </article>
+      `).join('');
+      root.querySelectorAll('[data-product-id]').forEach((card) => {
+        card.addEventListener('click', () => openProductById(Number(card.dataset.productId)));
+      });
+    }
+
+    function renderOrders() {
+      const orders = getOrdersFromStorage();
+      const root = document.getElementById('orderResults');
+      const value = document.getElementById('orderSearchInput').value.trim().toLowerCase();
+      const filtered = orders.filter((order) => {
+        if (!value) return true;
+        return [order.id, order.buyer, order.title].some((item) => String(item).toLowerCase().includes(value));
+      });
+
+      root.innerHTML = filtered.length ? filtered.map((order) => `
+        <div class="order-item" data-order-id="${order.id}">
+          <div>
+            <strong>${order.id}</strong>
+            <div class="muted">${order.time} · ${order.buyer}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="price" style="font-size:1rem;">¥${order.amount}</div>
+            <div class="muted">${order.status}</div>
+          </div>
+        </div>
+      `).join('') : '<div class="muted">暂无订单数据</div>';
+
+      root.querySelectorAll('[data-order-id]').forEach((item) => {
+        item.addEventListener('click', () => {
+          const order = filtered.find((entry) => entry.id === item.dataset.orderId);
+          if (order) openOrderModal(order);
+        });
+      });
+    }
+
+    function updateMineOrders() {
+      const root = document.getElementById('mineOrders');
+      const orders = getOrdersFromStorage();
+      const totalRevenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+      document.getElementById('statOrders').textContent = orders.length;
+      document.getElementById('statRevenue').textContent = `¥${totalRevenue}`;
+      root.innerHTML = orders.length ? orders.map((order) => `
+        <div class="order-item" data-order-id="${order.id}">
+          <div>
+            <strong>${order.id}</strong>
+            <div class="muted">${order.title}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="price" style="font-size:1rem;">¥${order.amount}</div>
+            <div class="muted">${order.status}</div>
+          </div>
+        </div>
+      `).join('') : '<div class="muted">暂无我的订单</div>';
+      root.querySelectorAll('[data-order-id]').forEach((item) => {
+        item.addEventListener('click', () => {
+          const order = orders.find((entry) => entry.id === item.dataset.orderId);
+          if (order) openOrderModal(order);
+        });
+      });
+    }
+
+    function openProductById(id) {
+      const product = PRODUCTS.find((item) => item.id === id);
+      if (!product) return;
+      state.currentProduct = product;
+      document.getElementById('modalTitle').textContent = product.title;
+      document.getElementById('modalBody').innerHTML = `
+        <img src="${product.img}" style="width:100%;height:220px;object-fit:cover;border-radius:14px;" />
+        <div class="sheet-row"><span>卖家</span><strong>${product.shop}</strong></div>
+        <div class="sheet-row"><span>分类</span><strong>${product.game}</strong></div>
+        <div class="sheet-row"><span>价格</span><strong class="price">¥${product.price}</strong></div>
+        <div class="sheet-row"><span>销量</span><strong>${product.sales} 单</strong></div>
+        <div class="sheet-row"><span>说明</span><strong>安全交易，支持平台保障</strong></div>
+        <div class="button-row">
+          <button class="primary-btn" id="buyBtn">立即购买</button>
+          <button class="secondary-btn" id="closeBtn">关闭</button>
+        </div>
+      `;
+      document.getElementById('buyBtn').addEventListener('click', () => createOrder(product));
+      document.getElementById('closeBtn').addEventListener('click', closeModal);
+      document.getElementById('productModal').classList.add('open');
+    }
+
+    function openSellerModal(seller) {
+      state.currentSeller = seller;
+      document.getElementById('modalTitle').textContent = seller.name;
+      document.getElementById('modalBody').innerHTML = `
+        <div class="profile-user" style="margin-bottom:12px;">
+          <img src="${seller.avatar}" class="avatar" />
+          <div>
+            <div style="font-weight:900;">${seller.name}</div>
+            <div class="muted">${seller.level}</div>
+          </div>
+        </div>
+        <div class="sheet-row"><span>好评率</span><strong>${seller.rate}</strong></div>
+        <div class="sheet-row"><span>成交量</span><strong>${seller.sales} 单</strong></div>
+        <div class="sheet-row"><span>主营</span><strong>${seller.main}</strong></div>
+        <div class="button-row">
+          <button class="secondary-btn" id="closeBtn">关闭</button>
+        </div>
+      `;
+      document.getElementById('closeBtn').addEventListener('click', closeModal);
+      document.getElementById('productModal').classList.add('open');
+    }
+
+    function openOrderModal(order) {
+      state.currentOrder = order;
+      document.getElementById('modalTitle').textContent = '订单详情';
+      document.getElementById('modalBody').innerHTML = `
+        <div class="sheet-row"><span>订单号</span><strong>${order.id}</strong></div>
+        <div class="sheet-row"><span>商品</span><strong>${order.title}</strong></div>
+        <div class="sheet-row"><span>买家</span><strong>${order.buyer}</strong></div>
+        <div class="sheet-row"><span>金额</span><strong class="price">¥${order.amount}</strong></div>
+        <div class="sheet-row"><span>时间</span><strong>${order.time}</strong></div>
+        <div class="sheet-row"><span>状态</span><strong>${order.status}</strong></div>
+        <div class="button-row">
+          <button class="secondary-btn" id="closeBtn">关闭</button>
+        </div>
+      `;
+      document.getElementById('closeBtn').addEventListener('click', closeModal);
+      document.getElementById('productModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('productModal').classList.remove('open');
+    }
+
+    function createOrder(product) {
+      const order = {
+        id: 'GT' + Date.now().toString().slice(-10),
+        buyer: '贝塔',
+        amount: Number(product.price),
+        title: product.title,
+        time: new Date().toLocaleString('zh-CN', { hour12: false }),
+        status: '交易完成'
+      };
+      const orders = getOrdersFromStorage();
+      orders.unshift(order);
+      localStorage.setItem('gametrade_orders', JSON.stringify(orders));
+      closeModal();
+      renderOrders();
+      updateMineOrders();
+      if (document.querySelector('[data-page="orders"]').classList.contains('active')) {
+        state.page = 'orders';
+        switchPage('orders');
+      }
+    }
+
+    function getOrdersFromStorage() {
+      try {
+        const raw = localStorage.getItem('gametrade_orders');
+        if (!raw) return [...ORDERS];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length ? parsed : [...ORDERS];
+      } catch (error) {
+        return [...ORDERS];
+      }
+    }
+
+    function switchPage(pageName) {
+      state.page = pageName;
+      document.querySelectorAll('.page').forEach((page) => page.classList.toggle('active', page.dataset.page === pageName));
+      document.querySelectorAll('.nav-btn').forEach((button) => button.classList.toggle('active', button.dataset.page === pageName));
+      if (pageName === 'orders') renderOrders();
+      if (pageName === 'mine') updateMineOrders();
+    }
+
+    function initSearch() {
+      document.getElementById('searchInput').addEventListener('input', (event) => {
+        state.search = event.target.value;
+        renderHome();
+        renderMarket();
+      });
+      document.getElementById('searchBtn').addEventListener('click', () => {
+        state.page = 'market';
+        switchPage('market');
+      });
+      document.getElementById('orderSearchInput').addEventListener('input', renderOrders);
+      document.getElementById('orderSearchBtn').addEventListener('click', renderOrders);
+    }
+
+    function initNav() {
+      document.querySelectorAll('.nav-btn').forEach((button) => {
+        button.addEventListener('click', () => switchPage(button.dataset.page));
+      });
+      document.querySelectorAll('[data-go]').forEach((button) => {
+        button.addEventListener('click', () => switchPage(button.dataset.go));
+      });
+      document.getElementById('publishBtn').addEventListener('click', () => {
+        const title = window.prompt('请输入商品名称', '新商品');
+        const price = Number(window.prompt('请输入商品价格', '199') || 199);
+        if (!title) return;
+        const product = {
+          id: Date.now(),
+          title,
+          shop: '贝塔',
+          price,
+          sales: 0,
+          game: '数字商品',
+          img: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=900&q=80'
+        };
+        PRODUCTS.unshift(product);
+        renderHome();
+        renderMarket();
+        switchPage('market');
+        window.alert('商品已发布成功');
+      });
+    }
+
+    document.getElementById('productModal').addEventListener('click', (event) => {
+      if (event.target.id === 'productModal') closeModal();
+    });
+
+    function preloadUserSession() {
+      getCurrentUser().then((user) => {
+        if (!user) {
+          window.location.href = 'auth.html';
+        }
+      }).catch(() => {
+        window.location.href = 'auth.html';
+      });
+    }
+
+    async function initialize() {
+      renderCategoryTabs('categoryTabs');
+      renderCategoryTabs('marketTabs');
+      renderHome();
+      renderMarket();
+      renderOrders();
+      updateMineOrders();
+      initSearch();
+      initNav();
+      preloadUserSession();
+      document.getElementById('productModal').classList.remove('open');
+    }
+
+    initialize();
+  </script>
+</body>
+</html>

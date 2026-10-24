@@ -1,188 +1,222 @@
-(function () {
-  const STORAGE_SESSION = 'gametrade_session';
-  const STORAGE_PROFILES = 'gametrade_profiles';
-  const STORAGE_ORDERS = 'gametrade_orders';
-
-  const makeId = () => {
-    if (window.crypto && crypto.randomUUID) {
-      return crypto.randomUUID();
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameTrade - 登录/注册</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #4568ff 0%, #7b4ae2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: #1b2430;
+      padding: 18px;
     }
-    return 'gt-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
-  };
-
-  const readStorage = (key, fallback) => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return fallback;
-      return JSON.parse(raw);
-    } catch (error) {
-      return fallback;
+    .auth-box {
+      width: min(420px, 100%);
+      background: rgba(255,255,255,0.97);
+      border-radius: 22px;
+      box-shadow: 0 30px 60px rgba(26, 35, 72, 0.24);
+      padding: 30px 24px;
     }
-  };
-
-  const writeStorage = (key, value) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch (error) {
-      console.warn('Storage unavailable:', error);
-      return false;
+    h2 {
+      margin: 0 0 22px;
+      text-align: center;
+      font-size: 2rem;
     }
-  };
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      color: #344256;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #dfe7fb;
+      border-radius: 12px;
+      outline: none;
+      font-size: 1rem;
+      background: #f9fbff;
+    }
+    input:focus {
+      border-color: #4568ff;
+      box-shadow: 0 0 0 3px rgba(69, 104, 255, 0.12);
+    }
+    .btn {
+      width: 100%;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4568ff, #5d73ff);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .btn:hover { filter: brightness(1.04); }
+    .link {
+      color: #4568ff;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-text {
+      margin-top: 18px;
+      text-align: center;
+      color: #56657a;
+    }
+    .hidden { display: none; }
+    .error {
+      display: none;
+      margin-top: 12px;
+      color: #d63d3d;
+      background: rgba(214, 61, 61, 0.08);
+      border-left: 4px solid #d63d3d;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+    }
+    .error.show { display: block; }
+    .loading { opacity: 0.7; cursor: wait; }
+  </style>
+</head>
+<body>
+  <div class="auth-box">
+    <div id="loginForm">
+      <h2>🎮 GameTrade</h2>
+      <div class="form-group">
+        <label for="loginEmail">邮箱</label>
+        <input id="loginEmail" type="email" placeholder="your@email.com" />
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">密码</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" />
+      </div>
+      <button id="loginBtn" class="btn">登录</button>
+      <div id="loginError" class="error"></div>
+      <div class="toggle-text">没有账号？ <span class="link" id="showRegister">立即注册</span></div>
+    </div>
 
-  const listProfiles = () => readStorage(STORAGE_PROFILES, []);
-  const saveProfiles = (profiles) => writeStorage(STORAGE_PROFILES, profiles);
+    <div id="registerForm" class="hidden">
+      <h2>🎮 注册</h2>
+      <div class="form-group">
+        <label for="registerUsername">用户名</label>
+        <input id="registerUsername" type="text" placeholder="请输入用户名" />
+      </div>
+      <div class="form-group">
+        <label for="registerEmail">邮箱</label>
+        <input id="registerEmail" type="email" placeholder="your@email.com" />
+      </div>
+      <div class="form-group">
+        <label for="registerPassword">密码</label>
+        <input id="registerPassword" type="password" placeholder="至少6位" />
+      </div>
+      <div class="form-group">
+        <label for="registerConfirm">确认密码</label>
+        <input id="registerConfirm" type="password" placeholder="重复密码" />
+      </div>
+      <button id="registerBtn" class="btn">注册</button>
+      <div id="registerError" class="error"></div>
+      <div class="toggle-text">已有账号？ <span class="link" id="showLogin">立即登录</span></div>
+    </div>
+  </div>
 
-  const listOrders = () => readStorage(STORAGE_ORDERS, []);
-  const saveOrders = (orders) => writeStorage(STORAGE_ORDERS, orders);
+  <script type="module">
+    import { registerUser, loginUser, getCurrentUser } from './supabase-config.js';
 
-  async function registerUser(email, password, username) {
-    if (!email || !password || !username) {
-      return { success: false, error: '请填写完整信息' };
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginError = document.getElementById('loginError');
+    const registerError = document.getElementById('registerError');
+
+    function showError(target, message, isVisible = true) {
+      target.textContent = message;
+      target.classList.toggle('show', isVisible);
     }
 
-    if (password.length < 6) {
-      return { success: false, error: '密码至少需要 6 个字符' };
+    function showLogin() {
+      loginForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+      showError(loginError, '', false);
+      showError(registerError, '', false);
     }
 
-    const profiles = listProfiles();
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedUsername = username.trim();
-
-    if (profiles.some((profile) => profile.email.toLowerCase() === normalizedEmail)) {
-      return { success: false, error: '该邮箱已注册' };
+    function showRegister() {
+      registerForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+      showError(loginError, '', false);
+      showError(registerError, '', false);
     }
 
-    if (profiles.some((profile) => profile.username.toLowerCase() === normalizedUsername.toLowerCase())) {
-      return { success: false, error: '用户名已存在' };
-    }
+    document.getElementById('showRegister').addEventListener('click', showRegister);
+    document.getElementById('showLogin').addEventListener('click', showLogin);
 
-    const user = {
-      id: makeId(),
-      username: normalizedUsername,
-      email: normalizedEmail,
-      createdAt: new Date().toISOString()
-    };
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      const result = await loginUser(email, password);
+      btn.classList.remove('loading');
+      btn.disabled = false;
 
-    profiles.push(user);
-    saveProfiles(profiles);
-
-    return {
-      success: true,
-      userId: user.id,
-      requiresEmailConfirmation: false,
-      user: { id: user.id, email: user.email, user_metadata: { username: user.username } }
-    };
-  }
-
-  async function loginUser(email, password) {
-    if (!email || !password) {
-      return { success: false, error: '邮箱和密码不能为空' };
-    }
-
-    const profiles = listProfiles();
-    const profile = profiles.find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
-
-    if (!profile) {
-      return { success: false, error: '账户不存在，请先注册' };
-    }
-
-    const session = {
-      user: {
-        id: profile.id,
-        email: profile.email,
-        user_metadata: { username: profile.username }
+      if (result.success) {
+        window.location.href = 'index.html';
+      } else {
+        showError(loginError, result.error, true);
       }
-    };
+    });
 
-    writeStorage(STORAGE_SESSION, session);
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const username = document.getElementById('registerUsername').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      const confirm = document.getElementById('registerConfirm').value;
+      const btn = document.getElementById('registerBtn');
 
-    return {
-      success: true,
-      user: session.user
-    };
-  }
+      if (!username || !email || !password || !confirm) {
+        showError(registerError, '请填写所有字段', true);
+        return;
+      }
+      if (password.length < 6) {
+        showError(registerError, '密码至少需要 6 个字符', true);
+        return;
+      }
+      if (password !== confirm) {
+        showError(registerError, '两次输入的密码不一致', true);
+        return;
+      }
 
-  async function logoutUser() {
-    localStorage.removeItem(STORAGE_SESSION);
-    return { success: true };
-  }
+      btn.classList.add('loading');
+      btn.disabled = true;
+      const result = await registerUser(email, password, username);
+      btn.classList.remove('loading');
+      btn.disabled = false;
 
-  async function getCurrentUser() {
-    const session = readStorage(STORAGE_SESSION, null);
-    return session ? session.user : null;
-  }
+      if (result.success) {
+        showError(registerError, '', false);
+        alert('注册成功！请登录。');
+        showLogin();
+      } else {
+        showError(registerError, result.error, true);
+      }
+    });
 
-  async function createUserProfile(userId, username, email) {
-    const profiles = listProfiles();
-    const profile = profiles.find((item) => item.id === userId);
-
-    if (!profile) {
-      profiles.push({
-        id: userId,
-        username,
-        email,
-        createdAt: new Date().toISOString()
-      });
-      saveProfiles(profiles);
+    const existingUser = await getCurrentUser();
+    if (existingUser) {
+      window.location.href = 'index.html';
     }
-
-    return { success: true, alreadyExists: !!profile };
-  }
-
-  async function getUserProfile(userId) {
-    const profiles = listProfiles();
-    return profiles.find((profile) => profile.id === userId) || null;
-  }
-
-  async function addOrderToUser(userId, order) {
-    const orders = listOrders();
-    const normalizedOrder = {
-      id: order.id || `GT${Date.now()}`,
-      time: order.time || new Date().toLocaleString('zh-CN'),
-      buyer: order.buyer || '匿名买家',
-      amount: Number(order.amount) || 0,
-      title: order.title || '未知商品',
-      status: order.status || '交易完成',
-      user_id: userId,
-      created_at: new Date().toISOString()
-    };
-
-    const existingIndex = orders.findIndex((item) => item.id === normalizedOrder.id && item.user_id === userId);
-
-    if (existingIndex >= 0) {
-      orders[existingIndex] = normalizedOrder;
-    } else {
-      orders.push(normalizedOrder);
-    }
-
-    saveOrders(orders);
-    return { success: true, order: normalizedOrder };
-  }
-
-  async function getUserOrders(userId) {
-    const orders = listOrders().filter((order) => order.user_id === userId);
-    return { success: true, orders: orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) };
-  }
-
-  async function findUserByUsername(username) {
-    const profiles = listProfiles();
-    const usernameValue = (username || '').trim();
-    return profiles.find((profile) => profile.username.toLowerCase() === usernameValue.toLowerCase()) || null;
-  }
-
-  window.GameTradeAuth = {
-    registerUser,
-    loginUser,
-    logoutUser,
-    getCurrentUser,
-    createUserProfile,
-    getUserProfile,
-    addOrderToUser,
-    getUserOrders,
-    findUserByUsername,
-    getSession: getCurrentUser,
-    profiles: listProfiles,
-    orders: listOrders
-  };
-})();
+  </script>
+</body>
+</html>
