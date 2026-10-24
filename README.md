@@ -1,158 +1,254 @@
-# GameTrade - 游戏交易市场
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameTrade - 登录 / 注册</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --primary: #4568ff;
+      --primary-dark: #2d4fe0;
+      --bg: linear-gradient(135deg, #4568ff 0%, #7b4ae2 100%);
+      --card: rgba(255,255,255,0.96);
+      --text: #1d2433;
+      --muted: #5b6b82;
+      --danger: #d63d3d;
+      --line: #dde8ff;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: var(--text);
+      padding: 20px;
+    }
+    .auth-box {
+      width: min(420px, 100%);
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 30px 60px rgba(24, 34, 70, 0.22);
+      padding: 28px 22px;
+    }
+    h2 {
+      margin: 0 0 24px;
+      text-align: center;
+      font-size: 2rem;
+      line-height: 1.2;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      color: #36455d;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      background: #f8faff;
+      border-radius: 12px;
+      font-size: 1rem;
+      outline: none;
+    }
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(69, 104, 255, 0.12);
+    }
+    .btn {
+      width: 100%;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), #5d73ff);
+      color: white;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .btn:hover {
+      filter: brightness(1.04);
+    }
+    .link {
+      color: var(--primary);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .toggle-text {
+      margin-top: 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .hidden { display: none; }
+    .error {
+      display: none;
+      margin-top: 12px;
+      color: var(--danger);
+      background: rgba(214, 61, 61, 0.08);
+      border-left: 4px solid var(--danger);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+    }
+    .error.show { display: block; }
+    .loading { opacity: 0.7; cursor: wait; }
+    .badge {
+      display: inline-block;
+      background: rgba(69, 104, 255, 0.08);
+      color: var(--primary-dark);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-box">
+    <div id="loginForm">
+      <div class="badge">无需邮箱验证</div>
+      <h2>🎮 GameTrade</h2>
+      <div class="form-group">
+        <label for="loginEmail">邮箱</label>
+        <input id="loginEmail" type="email" placeholder="your@email.com" />
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">密码</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" />
+      </div>
+      <button id="loginBtn" class="btn">登录</button>
+      <div id="loginError" class="error"></div>
+      <div class="toggle-text">没有账号？ <span class="link" id="showRegister">立即注册</span></div>
+    </div>
 
-一个现代化的游戏交易市场应用，支持游戏饰品租赁、陪玩服务和数字商品交易。
+    <div id="registerForm" class="hidden">
+      <div class="badge">快速注册</div>
+      <h2>🎮 注册</h2>
+      <div class="form-group">
+        <label for="registerUsername">用户名</label>
+        <input id="registerUsername" type="text" placeholder="请输入用户名" />
+      </div>
+      <div class="form-group">
+        <label for="registerEmail">邮箱</label>
+        <input id="registerEmail" type="email" placeholder="your@email.com" />
+      </div>
+      <div class="form-group">
+        <label for="registerPassword">密码</label>
+        <input id="registerPassword" type="password" placeholder="至少6位" />
+      </div>
+      <div class="form-group">
+        <label for="registerConfirm">确认密码</label>
+        <input id="registerConfirm" type="password" placeholder="重复密码" />
+      </div>
+      <button id="registerBtn" class="btn">注册</button>
+      <div id="registerError" class="error"></div>
+      <div class="toggle-text">已有账号？ <span class="link" id="showLogin">立即登录</span></div>
+    </div>
+  </div>
 
-## 🎮 功能特性
+  <script type="module">
+    import { registerUser, loginUser, getCurrentUser } from './supabase-config.js';
 
-- **热门分类浏览** - CS2、三角洲、PUBG 等多个游戏分类
-- **商品展示** - 美观的网格布局展示热门商品
-- **卖家信息** - 查看个人卖家等级、好评率和成交数
-- **订单管理** - 完整的订单查询和管理系统
-- **个人中心** - 用户档案、订单历史、发布商品
-- **响应式设计** - 完美适配桌面和移动设备
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginError = document.getElementById('loginError');
+    const registerError = document.getElementById('registerError');
 
-## 🚀 快速开始
+    function showError(target, message, visible = true) {
+      target.textContent = message;
+      target.classList.toggle('show', visible);
+    }
 
-### 在线访问
-直接打开 `index.html` 文件即可使用，无需服务器配置。
+    function showLogin() {
+      loginForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+      showError(loginError, '', false);
+      showError(registerError, '', false);
+    }
 
-**在线地址：** [https://beita836.github.io/gametrade-marketplace](https://beita836.github.io/gametrade-marketplace)
+    function showRegister() {
+      registerForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+      showError(loginError, '', false);
+      showError(registerError, '', false);
+    }
 
-### 本地运行
-1. 克隆仓库
-   ```bash
-   git clone https://github.com/beita836/gametrade-marketplace.git
-   cd gametrade-marketplace
-   ```
+    document.getElementById('showRegister').addEventListener('click', showRegister);
+    document.getElementById('showLogin').addEventListener('click', showLogin);
 
-2. 用浏览器打开 `index.html`
-   ```bash
-   open index.html
-   # 或在浏览器中直接打开文件
-   ```
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
 
-## 📱 页面导航
+      const result = await loginUser(email, password);
 
-- **首页** - 热门分类、热门商品、热门卖家
-- **市场** - 浏览全部商品（支持分类和搜索）
-- **订单** - 查询订单（按订单号或买家名称）
-- **我的** - 个人中心、订单管理、发布商品
+      btn.classList.remove('loading');
+      btn.disabled = false;
 
-## 🛠 技术栈
+      if (result.success) {
+        window.location.href = 'index.html';
+      } else {
+        showError(loginError, result.error, true);
+      }
+    });
 
-- **前端框架** - Vue.js 2.7
-- **样式** - 原生 CSS（响应式设计）
-- **图片** - picsum.photos 随机图片服务
-- **头像** - pravatar.cc 用户头像生成
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const username = document.getElementById('registerUsername').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      const confirm = document.getElementById('registerConfirm').value;
+      const btn = document.getElementById('registerBtn');
 
-## 📊 数据结构
+      if (!username || !email || !password || !confirm) {
+        showError(registerError, '请填写所有字段', true);
+        return;
+      }
+      if (password.length < 6) {
+        showError(registerError, '密码至少需要 6 个字符', true);
+        return;
+      }
+      if (password !== confirm) {
+        showError(registerError, '两次输入的密码不一致', true);
+        return;
+      }
 
-### 商品对象
-```javascript
-{
-  id: 1,
-  title: "商品名称",
-  shop: "卖家名称",
-  price: 100,
-  sales: 128,
-  game: "游戏分类",
-  img: "商品图片URL"
-}
-```
+      btn.classList.add('loading');
+      btn.disabled = true;
 
-### 订单对象
-```javascript
-{
-  id: "GT202608170001",
-  time: "2026-08-17 19:59",
-  buyer: "买家名称",
-  amount: 200,
-  title: "订单商品",
-  status: "交易完成"
-}
-```
+      const result = await registerUser(email, password, username);
 
-### 卖家对象
-```javascript
-{
-  name: "卖家名称",
-  level: "Lv.6 优质卖家",
-  rate: "99.7%",
-  sales: 3280,
-  main: "主营商品",
-  avatar: "头像URL"
-}
-```
+      btn.classList.remove('loading');
+      btn.disabled = false;
 
-## 🎨 自定义
+      if (result.success) {
+        showError(registerError, '', false);
+        alert('注册成功，已直接登录。');
+        window.location.href = 'index.html';
+      } else {
+        showError(registerError, result.error, true);
+      }
+    });
 
-### 修改商品
-编辑 `index.html` 中的 `PRODUCTS` 数组：
-```javascript
-PRODUCTS=[
-  {
-    id: 1,
-    title: "你的商品名",
-    shop: "你的店铺名",
-    price: 100,
-    sales: 128,
-    game: "游戏类型",
-    img: "图片URL"
-  }
-  // ... 更多商品
-]
-```
-
-### 修改订单
-编辑 `ORDERS` 数组，添加初始订单数据。
-
-### 修改卖家信息
-编辑 Vue 实例中的 `sellers` 数组。
-
-## 📝 主要功能说明
-
-### 搜索功能
-- 在顶部搜索框输入关键词
-- 支持搜索商品名称、卖家名称、游戏名称
-- 点击搜索按钮或进入市场页面
-
-### 分类筛选
-- 支持多个分类切换
-- 热门分类：全部、CS2、三角洲、PUBG、数字商品
-
-### 订单查询
-- 按订单号查询
-- 按买家名称查询
-- 查看订单详情
-
-### 发布商品
-- 在"我的"页面点击"发布商品"
-- 输入商品名称和价格
-- 自动添加到商品列表
-
-## 🔐 注意事项
-
-- 数据存储在浏览器内存中，刷新页面后会重置
-- 如需持久化存储，建议接入后端 API
-- 所有外部资源（图片、头像）依赖第三方服务
-
-## 💡 扩展建议
-
-1. **接入后端 API** - 替换本地数据为真实数据
-2. **用户认证** - 添加登录注册功能
-3. **支付集成** - 接入支付网关
-4. **消息通知** - 实现订单提醒
-5. **评价系统** - 添加用户评价和反馈
-6. **数据持久化** - 使用 LocalStorage 或数据库
-
-## 📄 许可证
-
-MIT License
-
-## 👤 作者
-
-beita836
-
----
-
-**最后更新**: 2026-08-28
+    const user = await getCurrentUser();
+    if (user) {
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>
