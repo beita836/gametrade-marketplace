@@ -439,13 +439,69 @@
       { name: 'MiloStore', level: 'Lv.7 信誉优先', rate: '99.8%', sales: 4130, main: '数字商品', avatar: 'https://i.pravatar.cc/100?img=24' }
     ];
 
-    const DEFAULT_ORDERS = [
+    const BEITA836_ORDER_SEED = [
       { id: 'GT202608170001', time: '2026-08-17 19:59', buyer: '李杨', amount: 200, title: '火蛇饰品短租 · 1天', status: '交易完成' },
       { id: 'GT202608190002', time: '2026-08-19 15:30', buyer: 'GameMaster', amount: 350, title: 'CS2 饰品', status: '交易完成' },
       { id: 'GT202608220003', time: '2026-08-22 20:15', buyer: 'Pro Player', amount: 500, title: 'PUBG 陪玩', status: '交易完成' }
     ];
 
     const state = { page: 'home', activeCategory: '全部', search: '' };
+
+    function getCurrentSessionUser() {
+      try {
+        const raw = localStorage.getItem('gametrade_session');
+        if (!raw) return null;
+        const session = JSON.parse(raw);
+        return session && session.user ? session.user : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function normalizeUsername(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function migrateOrdersForCurrentUser() {
+      const user = getCurrentSessionUser();
+      if (!user) return [];
+
+      const username = normalizeUsername(user.user_metadata?.username || user.username || '');
+      const allStored = (() => {
+        try {
+          const raw = localStorage.getItem('gametrade_orders');
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          return [];
+        }
+      })();
+
+      if (username === 'beita836') {
+        const seed = BEITA836_ORDER_SEED.map((order) => ({
+          ...order,
+          user_id: String(user.id),
+          userId: String(user.id),
+          created_at: new Date(order.time.replace(' ', 'T')).toISOString(),
+          order_time: order.time,
+          product_title: order.title,
+          buyer_name: order.buyer
+        }));
+
+        const foreignOrders = allStored.filter((order) => String(order.user_id || order.userId || '') !== String(user.id));
+        const migrated = [...seed, ...foreignOrders];
+        localStorage.setItem('gametrade_orders', JSON.stringify(migrated));
+        return seed;
+      }
+
+      const myOrders = allStored.filter((order) => String(order.user_id || order.userId || '') === String(user.id));
+      localStorage.setItem('gametrade_orders', JSON.stringify(myOrders));
+      return myOrders;
+    }
+
+    function getOrdersFromStorage() {
+      return migrateOrdersForCurrentUser();
+    }
 
     function getFilteredProducts() {
       const keyword = state.search.trim().toLowerCase();
@@ -454,17 +510,6 @@
         const keywordMatch = !keyword || [product.title, product.shop, product.game].some((value) => String(value).toLowerCase().includes(keyword));
         return categoryMatch && keywordMatch;
       });
-    }
-
-    function getOrdersFromStorage() {
-      try {
-        const raw = localStorage.getItem('gametrade_orders');
-        if (!raw) return [...DEFAULT_ORDERS];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) && parsed.length ? parsed : [...DEFAULT_ORDERS];
-      } catch (error) {
-        return [...DEFAULT_ORDERS];
-      }
     }
 
     function renderCategoryTabs(targetId) {
@@ -542,11 +587,11 @@
       const value = document.getElementById('orderSearchInput').value.trim().toLowerCase();
       const filtered = orders.filter((order) => {
         if (!value) return true;
-        return [order.id, order.buyer, order.title].some((item) => String(item).toLowerCase().includes(value));
+        return [order.id, order.buyer, order.title, order.buyer_name, order.product_title].some((item) => String(item || '').toLowerCase().includes(value));
       });
       root.innerHTML = filtered.length ? filtered.map((order) => `
         <div class="order-item" data-order-id="${order.id}">
-          <div><strong>${order.id}</strong><div class="muted">${order.time} · ${order.buyer}</div></div>
+          <div><strong>${order.id}</strong><div class="muted">${order.time || order.order_time} · ${order.buyer || order.buyer_name}</div></div>
           <div style="text-align:right;"><div class="price" style="font-size:1rem;">¥${order.amount}</div><div class="muted">${order.status}</div></div>
         </div>
       `).join('') : '<div class="muted">暂无订单数据</div>';
@@ -566,7 +611,7 @@
       document.getElementById('statRevenue').textContent = `¥${totalRevenue}`;
       root.innerHTML = orders.length ? orders.map((order) => `
         <div class="order-item" data-order-id="${order.id}">
-          <div><strong>${order.id}</strong><div class="muted">${order.title}</div></div>
+          <div><strong>${order.id}</strong><div class="muted">${order.title || order.product_title}</div></div>
           <div style="text-align:right;"><div class="price" style="font-size:1rem;">¥${order.amount}</div><div class="muted">${order.status}</div></div>
         </div>
       `).join('') : '<div class="muted">暂无我的订单</div>';
@@ -619,10 +664,10 @@
       document.getElementById('modalTitle').textContent = '订单详情';
       document.getElementById('modalBody').innerHTML = `
         <div class="sheet-row"><span>订单号</span><strong>${order.id}</strong></div>
-        <div class="sheet-row"><span>商品</span><strong>${order.title}</strong></div>
-        <div class="sheet-row"><span>买家</span><strong>${order.buyer}</strong></div>
+        <div class="sheet-row"><span>商品</span><strong>${order.title || order.product_title}</strong></div>
+        <div class="sheet-row"><span>买家</span><strong>${order.buyer || order.buyer_name}</strong></div>
         <div class="sheet-row"><span>金额</span><strong class="price">¥${order.amount}</strong></div>
-        <div class="sheet-row"><span>时间</span><strong>${order.time}</strong></div>
+        <div class="sheet-row"><span>时间</span><strong>${order.time || order.order_time}</strong></div>
         <div class="sheet-row"><span>状态</span><strong>${order.status}</strong></div>
         <div class="button-row"><button class="secondary-btn" id="closeBtn">关闭</button></div>
       `;
@@ -643,9 +688,10 @@
         time: new Date().toLocaleString('zh-CN', { hour12: false }),
         status: '交易完成'
       };
-      const orders = getOrdersFromStorage();
-      orders.unshift(order);
-      localStorage.setItem('gametrade_orders', JSON.stringify(orders));
+      const existing = getOrdersFromStorage();
+      const currentUser = getCurrentSessionUser();
+      const next = [{ ...order, user_id: currentUser ? String(currentUser.id) : 'guest', userId: currentUser ? String(currentUser.id) : 'guest', created_at: new Date().toISOString() }, ...existing];
+      localStorage.setItem('gametrade_orders', JSON.stringify(next));
       closeModal();
       renderOrders();
       updateMineOrders();
